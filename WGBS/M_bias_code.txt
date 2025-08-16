@@ -1,0 +1,70 @@
+# Load necessary libraries
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+# Read the data from your CSV files
+cpg_r1 <- read.csv("CpG context (R1).csv")  # Replace with your actual file path
+cpg_r2 <- read.csv("CpG context (R2).csv")  # Replace with your actual file path
+chg_r1 <- read.csv("CHG context (R1).csv")  # Replace with your actual file path
+chg_r2 <- read.csv("CHG context (R2).csv")  # Replace with your actual file path
+chh_r1 <- read.csv("CHH context (R1).csv")  # Replace with your actual file path
+chh_r2 <- read.csv("CHH context (R2).csv")  # Replace with your actual file path
+
+# Combine all context data into one dataframe (adding a context column to differentiate)
+cpg_data <- bind_rows(
+  cpg_r1 %>% mutate(context = "CpG R1"),
+  cpg_r2 %>% mutate(context = "CpG R2")
+)
+
+chg_data <- bind_rows(
+  chg_r1 %>% mutate(context = "CHG R1"),
+  chg_r2 %>% mutate(context = "CHG R2")
+)
+
+chh_data <- bind_rows(
+  chh_r1 %>% mutate(context = "CHH R1"),
+  chh_r2 %>% mutate(context = "CHH R2")
+)
+
+# Combine all data into one dataset
+all_data <- bind_rows(cpg_data, chg_data, chh_data)
+
+# View the combined data
+head(all_data)
+
+
+# Visualize M-bias (% methylation) across positions for each context
+ggplot(all_data, aes(x = position, y = X..methylation, color = context, group = context)) +
+  geom_line(size = 1.2) +  # Use thicker lines for better visibility
+  geom_point(size = 2, shape = 16, alpha = 0.6) +  # Add points with slight transparency
+  scale_color_brewer(palette = "Set2") +  # Use a pleasant color palette from RColorBrewer
+  theme_minimal(base_size = 16) +  # Minimal theme with larger base size for better readability
+  labs(
+    title = "M-bias Analysis: CpG, CHG, and CHH Contexts (R1 and R2)",
+    subtitle = "Methylation percentage across read positions for each context",
+    x = "Position in Read",
+    y = "Methylation Percentage (%)",
+    color = "Context"  # Add a color legend title
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),  # Bold and centered title
+    plot.subtitle = element_text(hjust = 0.5, size = 14),  # Subtitle size
+    axis.title = element_text(size = 14, face = "bold"),  # Bold axis titles
+    axis.text = element_text(size = 12),  # Axis labels size
+    legend.title = element_text(size = 14),  # Legend title size
+    legend.text = element_text(size = 12),  # Legend text size
+    panel.grid.major = element_line(color = "gray80", size = 0.5),  # Light grid lines
+    panel.grid.minor = element_line(color = "gray90", size = 0.2),  # Finer grid lines
+    legend.position = "right",  # Place legend to the right of the plot
+    plot.margin = margin(20, 20, 20, 20)  # Add margin for clarity
+  ) +
+  scale_color_manual(values = c("CpG R1" = "blue", 
+                                "CpG R2" = "red", 
+                                "CHG R1" = "green", 
+                                "CHG R2" = "orange", 
+                                "CHH R1" = "purple", 
+                                "CHH R2" = "brown"))
+
+# Save the M-bias plot as a PNG file with high resolution
+ggsave("M-bias_Plot.jpg", width = 12, height = 8, dpi = 300)

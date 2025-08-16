@@ -1,0 +1,32 @@
+# 1. Download reference genome
+wget ftp://ftp.ensembl.org/pub/release-111/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+
+# 2. Prepare reference genome for Bismark
+bismark_genome_preparation /path/to/genome_folder
+
+# 3. Run FastQC on raw reads
+fastqc sample_R1.fastq.gz sample_R2.fastq.gz -o ./fastqc_reports/
+
+# 4. Trim adapters and low-quality reads with Trim Galore
+trim_galore --paired sample_R1.fastq.gz sample_R2.fastq.gz -o ./trimmed_reads/
+
+# 5. Run FastQC again on trimmed reads
+fastqc trimmed_reads/sample_R1_val_1.fq.gz trimmed_reads/sample_R2_val_2.fq.gz -o ./fastqc_trimmed_reports/
+
+# 6. Align reads with Bismark
+bismark /path/to/genome_folder -1 trimmed_reads/sample_R1_val_1.fq.gz -2 trimmed_reads/sample_R2_val_2.fq.gz -o ./bismark_alignment/
+
+# 7. Deduplicate aligned reads
+deduplicate_bismark --bam bismark_alignment/sample_R1_val_1_bismark_bt2_pe.bam
+
+# 8. Extract methylation calls
+bismark_methylation_extractor --bedGraph --gzip --CX --genome_folder /path/to/genome_folder bismark_alignment/sample_R1_val_1_bismark_bt2_pe.deduplicated.bam
+
+# 9. Generate a summary report
+bismark2report
+bismark2summary
+
+# 10. Optional: Visualize methylation
+# Convert bedGraph to bigWig for genome browser visualization
+bedGraphToBigWig CpG_context_sample_R1_val_1_bismark_bt2_pe.deduplicated.bismark.cov /path/to/chrom.sizes sample_methylation.bw

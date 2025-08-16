@@ -1,0 +1,66 @@
+# Install necessary packages (if not already installed)
+install.packages(c("data.table", "DESeq2", "ggplot2", "pheatmap"))
+BiocManager::install("ChIPseeker", ask = FALSE, force = TRUE)
+BiocManager::install("bsseq", ask = FALSE, force = TRUE)
+
+# Load libraries
+library(data.table)
+library(DESeq2)
+library(bsseq)
+library(ggplot2)
+library(pheatmap)
+
+
+# Load the .cov files for both samples (NB, MCF7R1, and MCF7R2)
+cov_file1 <- fread("NB_coverage2cytosine.CpG_report.merged_CpG_evidence.cov")
+cov_file2 <- fread("MCF7R1_coverage2cytosine.CpG_report.merged_CpG_evidence.cov")
+cov_file3 <- fread("MCF7R2_coverage2cytosine.CpG_report.merged_CpG_evidence.cov")
+
+# Check the first few rows of the data to understand its structure
+head(cov_file1)
+head(cov_file2)
+head(cov_file3)
+
+# Extract methylated and unmethylated counts from each file
+methylated_counts1 <- cov_file1$V5  # Column 5 is methylated counts (for NB)
+unmethylated_counts1 <- cov_file1$V6  # Column 6 is unmethylated counts (for NB)
+
+methylated_counts2 <- cov_file2$V5  # Column 5 is methylated counts (for MCF7R1)
+unmethylated_counts2 <- cov_file2$V6  # Column 6 is unmethylated counts (for MCF7R1)
+
+methylated_counts3 <- cov_file3$V5  # Column 5 is methylated counts (for MCF7R2)
+unmethylated_counts3 <- cov_file3$V6  # Column 6 is unmethylated counts (for MCF7R2)
+
+# Create a count matrix for DESeq2 (only methylated counts for each sample)
+count_matrix <- cbind(methylated_counts1, methylated_counts2, methylated_counts3)
+
+# Verify that the count matrix looks correct
+head(count_matrix)
+
+# Create the colData dataframe for DESeq2, defining the conditions for each sample
+col_data <- DataFrame(condition = factor(c("control", "treatment", "treatment")))
+
+# Create DESeq2 object
+dds <- DESeqDataSetFromMatrix(countData = count_matrix,
+                              colData = col_data,
+                              design = ~ condition)
+
+# Perform DESeq2 analysis
+dds <- DESeq(dds)
+
+# Get the results (log2 fold change, p-value, etc.)
+res <- results(dds)
+
+# View results
+head(res)
+
+# Volcano Plot (visualizing significance vs magnitude of change)
+volcano_data <- data.frame(log2FoldChange = res$log2FoldChange, pvalue = res$pvalue)
+
+ggplot(volcano_data, aes(x = log2FoldChange, y = -log10(pvalue))) +
+  geom_point(aes(color = pvalue < 0.05)) +
+  theme_minimal() +
+  labs(title = "Volcano Plot of Differential Methylation", x = "log2 Fold Change", y = "-log10 P-value")
+
+# Save results to CSV
+write.csv(as.data.frame(res), "differential_methylation_results.csv")
